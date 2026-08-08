@@ -1,8 +1,12 @@
 {
   "mcpServers": {
-    "slack": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/node_modules/.bin/tsx",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server.ts"]
+    "slack-zorwa": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/launch-instance.sh",
+      "args": ["zorwa"]
+    },
+    "slack-octobot": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/launch-instance.sh",
+      "args": ["octobot"]
     }
   }
 }

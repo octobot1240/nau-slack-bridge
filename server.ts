@@ -27,6 +27,7 @@ import { WebClient } from '@slack/web-api'
 import { z } from 'zod'
 import { createTmuxSendKeys, dispatchAdminCommand, parseAdminCommand } from './admin.ts'
 import { loadSigningKey, parseNoAuditSigningFlag } from './audit-key-loader.ts'
+import { enforceConfiguredChannel } from './channel-gate.ts'
 import { createBootAnchor, JournalWriter, verifyJournal } from './journal.ts'
 import {
   type Access,
@@ -224,10 +225,16 @@ mkdirSync(INBOX_DIR, { recursive: true })
 function loadEnv(): {
   botToken: string
   appToken: string
+  channelId: string | undefined
   secretValues: Set<string>
   secretPlaceholders: Map<string, string>
 } {
-  if (!existsSync(ENV_FILE)) {
+  const hasStateEnv = existsSync(ENV_FILE)
+  if (
+    !hasStateEnv &&
+    process.env.SLACK_BOT_TOKEN === undefined &&
+    process.env.SLACK_APP_TOKEN === undefined
+  ) {
     console.error(
       `[slack] No .env found at ${ENV_FILE}\n` +
         'Run /slack-channel:configure <bot-token> <app-token> first.',
@@ -235,26 +242,32 @@ function loadEnv(): {
     process.exit(1)
   }
 
-  chmodSync(ENV_FILE, 0o600)
-
-  const raw = readFileSync(ENV_FILE, 'utf-8')
   const vars: Record<string, string> = {}
-  for (const line of raw.split('\n')) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
-    const eq = trimmed.indexOf('=')
-    if (eq < 0) continue
-    const key = trimmed.slice(0, eq).trim()
-    let val = trimmed.slice(eq + 1).trim()
-    // Strip surrounding quotes
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1)
+  if (hasStateEnv) {
+    chmodSync(ENV_FILE, 0o600)
+    const raw = readFileSync(ENV_FILE, 'utf-8')
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eq = trimmed.indexOf('=')
+      if (eq < 0) continue
+      const key = trimmed.slice(0, eq).trim()
+      let val = trimmed.slice(eq + 1).trim()
+      // Strip surrounding quotes
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1)
+      }
+      vars[key] = val
     }
-    vars[key] = val
   }
 
-  const botToken = vars.SLACK_BOT_TOKEN || ''
-  const appToken = vars.SLACK_APP_TOKEN || ''
+  const envValue = (key: string): string | undefined => process.env[key] ?? vars[key]
+  const botToken = envValue('SLACK_BOT_TOKEN') ?? ''
+  const appToken = envValue('SLACK_APP_TOKEN') ?? ''
+  const channelId = envValue('SLACK_CHANNEL_ID')
 
   if (!botToken.startsWith('xoxb-')) {
     console.error('[slack] SLACK_BOT_TOKEN must start with xoxb-')
@@ -269,18 +282,24 @@ function loadEnv(): {
   // guard blocks. Derived from the SECRET_DECLARATIONS table (ccsc-z0n.1) by
   // resolving each declaration's env var against the parsed .env, so adding a
   // secret means adding a table row and nothing here changes.
-  const secretValues = buildSecretValueSet((d) => vars[d.envVar])
+  const secretValues = buildSecretValueSet((d) => envValue(d.envVar))
 
   // ccsc-z0n.2 — live-value → placeholder map for the inbound tool-result scrub.
   // Same declaration-driven derivation; the agent sees a secret's stable
   // placeholder if a live value ever surfaces in a result (defense-in-depth —
   // the process boundary already keeps tokens out of agent-readable surfaces).
-  const secretPlaceholders = buildSecretPlaceholderMap((d) => vars[d.envVar])
+  const secretPlaceholders = buildSecretPlaceholderMap((d) => envValue(d.envVar))
 
-  return { botToken, appToken, secretValues, secretPlaceholders }
+  return { botToken, appToken, channelId, secretValues, secretPlaceholders }
 }
 
-const { botToken, appToken, secretValues, secretPlaceholders } = loadEnv()
+const {
+  botToken,
+  appToken,
+  channelId: configuredChannelId,
+  secretValues,
+  secretPlaceholders,
+} = loadEnv()
 
 // ---------------------------------------------------------------------------
 // Slack clients
@@ -3548,6 +3567,8 @@ async function deliverEvent(ev: Record<string, unknown>, access: Access): Promis
 
 async function handleMessage(event: unknown): Promise<void> {
   const ev = event as Record<string, unknown>
+
+  if (!enforceConfiguredChannel(event, configuredChannelId, journalWrite)) return
 
   // Skip duplicates (message + app_mention fire for the same @-mentioned
   // channel message; Slack also occasionally redelivers on slow acks).

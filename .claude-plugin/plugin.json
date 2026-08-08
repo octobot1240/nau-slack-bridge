@@ -1,12 +1,11 @@
 {
-  "name": "slack-channel",
-  "version": "0.1.0",
+  "name": "nau-slack-bridge",
+  "version": "0.2.0",
   "description": "Two-way Slack channel for Claude Code — chat from Slack DMs and channels via Socket Mode",
   "author": {
-    "name": "Jeremy Longshore",
-    "email": "jeremy@intentsolutions.io"
+    "name": "Zorwa/NAU"
   },
-  "repository": "https://github.com/jeremylongshore/claude-code-slack-channel",
+  "repository": "https://github.com/octobot1240/nau-slack-bridge",
   "license": "Apache-2.0",
   "keywords": ["slack", "channel", "mcp", "socket-mode", "chatops", "claude-code"]
 }
