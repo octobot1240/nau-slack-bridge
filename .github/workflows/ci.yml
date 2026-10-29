@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Validate the reviewed dependency branch in the personal fork even when
+    # its pull_request event has not produced an Actions run.
+    branches: [main, fix/security-dependencies-20261029]
   pull_request:
 
 permissions: {}
@@ -20,9 +22,11 @@ jobs:
           persist-credentials: false
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.4
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Typecheck
         run: bun run typecheck
@@ -62,21 +66,8 @@ jobs:
         run: bash scripts/harness-hash.sh --verify
 
       - name: Dependency vulnerability audit (bun audit)
-        # Native bun gate against the GitHub Advisory Database. Only fails on
-        # NEW high/critical advisories; known highs in transitive deps we cannot
-        # patch from this repo are ignored until the owning package ships a fix.
-        # Ignores (all transitive, not reachable via our public surface):
-        #   GHSA-j3q9-mxjg-w52f — path-to-regexp in @modelcontextprotocol/sdk
-        #   GHSA-7p8r-x3mc-p8w7 — fast-uri via ajv (MCP SDK + stryker)
-        #   GHSA-mwp4-54f8-5fhr — ip-address via express-rate-limit (MCP SDK)
-        #   GHSA-rgw5-rvv9-x895 — brace-expansion via minimatch (stryker only)
-        # Tracked: reopen when SDK/stryker bump the nested deps.
-        run: >
-          bun audit --audit-level=high
-          --ignore=GHSA-j3q9-mxjg-w52f
-          --ignore=GHSA-7p8r-x3mc-p8w7
-          --ignore=GHSA-mwp4-54f8-5fhr
-          --ignore=GHSA-rgw5-rvv9-x895
+        # Fixed transitive versions no longer need the old advisory ignores.
+        run: bun audit --audit-level=high
 
       - name: Cyclomatic complexity (Wall 5 — ideal gate)
         # TS-aware AST walker over production sources. Threshold set to 30 —
