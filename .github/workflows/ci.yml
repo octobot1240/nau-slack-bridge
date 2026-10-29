@@ -6,6 +6,7 @@ on:
     # its pull_request event has not produced an Actions run.
     branches: [main, fix/security-dependencies-20261029]
   pull_request:
+  workflow_dispatch:
 
 permissions: {}
 
