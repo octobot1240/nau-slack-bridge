@@ -12,6 +12,8 @@ permissions: {}
 
 jobs:
   notify:
+    # Forks must not send external marketplace sync notifications.
+    if: github.repository == 'jeremylongshore/claude-code-slack-channel'
     runs-on: ubuntu-latest
     permissions: {}
     steps:

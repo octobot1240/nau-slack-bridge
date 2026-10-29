@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Make integrity verification fail closed when hashing, manifest reads, sorting or comparison tools fail. Add native command regressions while preserving the nine pinned artifacts and existing mismatch and missing-manifest exit codes.
+
+- Update MCP SDK to 1.32.0 and pin fixed compatible transitive dependencies. Update Axios and follow-redirects within their existing major versions and migrate Zod to its patched collection validation. Preserve the manifest limits and session data schema, with regression checks for collection bounds and synthetic stdio initialization, tool listing and tool calls. HTTP dependency advisories do not establish HTTP exposure for this stdio server.
+
 ### Docs
 
 - **ADR-004 amendment — interactive Block Kit *output* is in scope (Decision 2a)** (`ccsc-37k`, triggered by the 360° review of #270 / `ccsc-ysu`). ADR-004 Decision 2 decided KEEP Block Kit for the *approval/receipt UI* and framed the differentiator as "the record, not the widget," but was silent on interactive **output** on the `reply` tool (agent-authored option buttons whose clicks return as journaled inbound events). The amendment records that surface as **in scope** because it uses the portable Block Kit floor (not Tag-era native components) and is **fully journaled on drop and deliver** (deepening the provable-record moat, not chasing widget polish), and sets the bright line for the next ask: **portable ∧ journaled ∧ non-native-component-coupled**. Each further interactive primitive (modals, selects, native components) still needs its own decision — no Tag feature-parity roadmap. Honest cost recorded: a refinement of the "record, not widget" purity, not a reversal. The #270 feature itself is accept-with-conditions (`ccsc-ysu`), not yet merged.
