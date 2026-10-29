@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Make integrity verification fail closed when hashing, manifest reads, sorting or comparison tools fail. Add native command regressions while preserving the nine pinned artifacts and existing mismatch and missing-manifest exit codes.
+
 - Update MCP SDK to 1.32.0 and pin fixed compatible transitive dependencies. Update Axios and follow-redirects within their existing major versions and migrate Zod to its patched collection validation. Preserve the manifest limits and session data schema, with regression checks for collection bounds and synthetic stdio initialization, tool listing and tool calls. HTTP dependency advisories do not establish HTTP exposure for this stdio server.
 
 ### Docs
